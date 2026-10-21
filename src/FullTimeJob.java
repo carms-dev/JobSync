@@ -12,17 +12,30 @@ public class FullTimeJob extends JobPosting {
         this.hoursPerMonth = hoursPerMonth;
     }
 
+    @Override
     public double getHoursPerMonth() {
         return hoursPerMonth;
     }
 
+    @Override
     public void setHoursPerMonth(double hoursPerMonth) {
         this.hoursPerMonth = hoursPerMonth;
     }
 
     @Override
+    public String getJobType() {
+        return "FULL-TIME";
+    }
+
+    @Override
     public String getBenefits() {
         return "Regular employment benefits";
+    }
+
+    // Full-time salary is already a monthly amount
+    @Override
+    public String getSalaryDescription() {
+        return formatMoney(getSalary()) + " per month";
     }
 
     @Override

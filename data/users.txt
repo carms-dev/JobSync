@@ -1,1 +1,3 @@
 
+1|Rommel|123456|Rommel Carmona|APPLICANT
+2|Dave|123456|Dave Olaso|EMPLOYER

@@ -15,6 +15,9 @@ public class JobSyncGUI extends JFrame {
 
     private User currentUser;
 
+    // Loads and saves job postings (jobs.txt) as FullTimeJob / PartTimeJob objects
+    private final JobManager jobManager = new JobManager();
+
     // =====================================================
     // FONTS
     // =====================================================
@@ -1042,28 +1045,13 @@ public class JobSyncGUI extends JFrame {
     // SEARCH AND APPLY JOBS
     // =====================================================
 
+    // The applicant searches first, then picks one of the matching jobs.
+    // Cancelling the result list goes back to the search form;
+    // cancelling the search form closes the screen.
     private void showSearchAndApplyJobs(
             Applicant applicant) {
 
-        List<String> jobs =
-                FileHandler.readAll("jobs.txt");
-
-        List<String> openJobs =
-                new ArrayList<>();
-
-        for (String line : jobs) {
-
-            String[] parts =
-                    line.split("\\|", -1);
-
-            if (parts.length >= 8
-                    && parts[7].equalsIgnoreCase("OPEN")) {
-
-                openJobs.add(line);
-            }
-        }
-
-        if (openJobs.isEmpty()) {
+        if (jobManager.getOpenJobs().isEmpty()) {
 
             showMessage(
                     "There are currently no open jobs.",
@@ -1073,23 +1061,219 @@ public class JobSyncGUI extends JFrame {
             return;
         }
 
+        while (true) {
+
+            ArrayList<JobPosting> matches =
+                    askSearchCriteria();
+
+            if (matches == null) {
+                return;
+            }
+
+            if (matches.isEmpty()) {
+
+                showMessage(
+                        "No jobs matched your search.",
+                        "Search Jobs"
+                );
+
+                continue;
+            }
+
+            JobPosting selectedJob =
+                    chooseJob(matches);
+
+            if (selectedJob == null) {
+                continue;
+            }
+
+            showJobDetailsAndApply(
+                    applicant,
+                    selectedJob
+            );
+
+            return;
+        }
+    }
+
+    // Shows the search form. Each "Search by" choice calls a different
+    // version of search() in JobManager (method overloading).
+    // Returns the matching jobs, or null if the applicant cancelled.
+    private ArrayList<JobPosting> askSearchCriteria() {
+
+        JComboBox<String> searchByBox =
+                new JComboBox<>(
+                        new String[]{
+                                "Job Title",
+                                "Job Title and Location",
+                                "Minimum Monthly Pay",
+                                "Show All Open Jobs"
+                        }
+                );
+
+        JTextField titleField =
+                new JTextField();
+
+        JTextField locationField =
+                new JTextField();
+
+        JTextField payField =
+                new JTextField();
+
+        // Only the fields needed for the chosen search are enabled
+        searchByBox.addActionListener(e -> {
+
+            int mode =
+                    searchByBox.getSelectedIndex();
+
+            titleField.setEnabled(
+                    mode == 0 || mode == 1
+            );
+
+            locationField.setEnabled(
+                    mode == 1
+            );
+
+            payField.setEnabled(
+                    mode == 2
+            );
+        });
+
+        locationField.setEnabled(false);
+        payField.setEnabled(false);
+
+        JPanel panel =
+                new JPanel(
+                        new GridLayout(8, 1, 5, 5)
+                );
+
+        panel.add(new JLabel("Search by:"));
+        panel.add(searchByBox);
+
+        panel.add(new JLabel("Job Title:"));
+        panel.add(titleField);
+
+        panel.add(new JLabel("Location:"));
+        panel.add(locationField);
+
+        panel.add(new JLabel("Minimum Monthly Pay (PHP):"));
+        panel.add(payField);
+
+        while (true) {
+
+            int result =
+                    JOptionPane.showConfirmDialog(
+                            this,
+                            panel,
+                            "Search Jobs",
+                            JOptionPane.OK_CANCEL_OPTION,
+                            JOptionPane.PLAIN_MESSAGE
+                    );
+
+            if (result
+                    != JOptionPane.OK_OPTION) {
+
+                return null;
+            }
+
+            int mode =
+                    searchByBox.getSelectedIndex();
+
+            String title =
+                    titleField.getText().trim();
+
+            String location =
+                    locationField.getText().trim();
+
+            if (mode == 0) {
+
+                if (title.isEmpty()) {
+
+                    showWarning(
+                            "Please enter a job title."
+                    );
+
+                    continue;
+                }
+
+                return jobManager.search(title);
+            }
+
+            if (mode == 1) {
+
+                if (title.isEmpty()
+                        || location.isEmpty()) {
+
+                    showWarning(
+                            "Please enter a job title and a location."
+                    );
+
+                    continue;
+                }
+
+                return jobManager.search(title, location);
+            }
+
+            if (mode == 2) {
+
+                double minimumPay;
+
+                try {
+
+                    minimumPay =
+                            Double.parseDouble(
+                                    payField.getText().trim()
+                            );
+
+                    if (minimumPay < 0) {
+                        throw new NumberFormatException();
+                    }
+
+                } catch (NumberFormatException e) {
+
+                    showWarning(
+                            "Please enter a valid minimum monthly pay."
+                    );
+
+                    continue;
+                }
+
+                return jobManager.search(minimumPay);
+            }
+
+            return jobManager.getOpenJobs();
+        }
+    }
+
+    // Lets the applicant pick one job from the search results.
+    // Returns null if the applicant cancelled.
+    private JobPosting chooseJob(
+            ArrayList<JobPosting> jobs) {
+
         String[] choices =
-                new String[openJobs.size()];
+                new String[jobs.size()];
 
         for (int i = 0;
-             i < openJobs.size();
+             i < jobs.size();
              i++) {
 
-            String[] parts =
-                    openJobs.get(i)
-                            .split("\\|", -1);
+            JobPosting job =
+                    jobs.get(i);
 
             choices[i] =
-                    parts[0]
+                    job.getJobId()
                     + " - "
-                    + parts[2]
+                    + job.getTitle()
                     + " | "
-                    + parts[3];
+                    + job.getLocation()
+                    + " | "
+                    + job.getJobType()
+                    + " | PHP "
+                    + String.format(
+                            "%,.2f",
+                            job.computeMonthlySalary()
+                    )
+                    + "/month";
         }
 
         JComboBox<String> jobBox =
@@ -1101,7 +1285,11 @@ public class JobSyncGUI extends JFrame {
                 );
 
         panel.add(
-                new JLabel("Select a job:")
+                new JLabel(
+                        "Found "
+                        + jobs.size()
+                        + " job(s). Select a job:"
+                )
         );
 
         panel.add(jobBox);
@@ -1110,28 +1298,18 @@ public class JobSyncGUI extends JFrame {
                 JOptionPane.showConfirmDialog(
                         this,
                         panel,
-                        "Search & Apply Jobs",
+                        "Search Results",
                         JOptionPane.OK_CANCEL_OPTION
                 );
 
         if (result
                 != JOptionPane.OK_OPTION) {
 
-            return;
+            return null;
         }
 
-        int selectedIndex =
-                jobBox.getSelectedIndex();
-
-        String selectedJob =
-                openJobs.get(selectedIndex);
-
-        String[] parts =
-                selectedJob.split("\\|", -1);
-
-        showJobDetailsAndApply(
-                applicant,
-                parts
+        return jobs.get(
+                jobBox.getSelectedIndex()
         );
     }
 
@@ -1139,79 +1317,18 @@ public class JobSyncGUI extends JFrame {
     // JOB DETAILS AND APPLY
     // =====================================================
 
+    // The details text comes from the job object itself, so a FullTimeJob
+    // and a PartTimeJob each show their own type, pay and benefits.
     private void showJobDetailsAndApply(
             Applicant applicant,
-            String[] parts) {
-
-        StringBuilder details =
-                new StringBuilder();
-
-        details.append(
-                "===== JOB DETAILS =====\n\n"
-        );
-
-        details.append(
-                "Job ID: "
-                + parts[0]
-                + "\n"
-        );
-
-        details.append(
-                "Title: "
-                + parts[2]
-                + "\n"
-        );
-
-        details.append(
-                "Location: "
-                + parts[3]
-                + "\n"
-        );
-
-        details.append(
-                "Salary: "
-                + parts[4]
-                + "\n"
-        );
-
-        details.append(
-                "Description: "
-                + parts[5]
-                + "\n"
-        );
-
-        details.append(
-                "Required Skills: "
-                + parts[6]
-                + "\n"
-        );
-
-        if (parts.length >= 9) {
-
-            details.append(
-                    "Job Type: "
-                    + parts[8]
-                    + "\n"
-            );
-        }
-
-        if (parts.length >= 10) {
-
-            details.append(
-                    "Hours per Month: "
-                    + parts[9]
-                    + "\n"
-            );
-        }
-
-        details.append(
-                "\nWould you like to apply for this job?"
-        );
+            JobPosting job) {
 
         int choice =
                 JOptionPane.showConfirmDialog(
                         this,
-                        details.toString(),
+                        "===== JOB DETAILS =====\n\n"
+                        + job.getDetails()
+                        + "\n\nWould you like to apply for this job?",
                         "Job Details",
                         JOptionPane.YES_NO_OPTION
                 );
@@ -1221,7 +1338,7 @@ public class JobSyncGUI extends JFrame {
 
             applyForJob(
                     applicant,
-                    Integer.parseInt(parts[0])
+                    job.getJobId()
             );
         }
     }
@@ -1932,43 +2049,54 @@ public class JobSyncGUI extends JFrame {
             return;
         }
 
-        List<String> jobs =
-                FileHandler.readAll("jobs.txt");
-
         int jobId =
-                getNextId(jobs);
+                jobManager.getNextJobId();
 
         String type =
                 (String) typeBox.getSelectedItem();
 
-        String record =
-                jobId
-                + "|"
-                + employer.getUserId()
-                + "|"
-                + cleanText(title)
-                + "|"
-                + cleanText(location)
-                + "|"
-                + salary
-                + "|"
-                + cleanText(description)
-                + "|"
-                + cleanText(skills)
-                + "|OPEN"
-                + "|"
-                + type
-                + "|"
-                + hours;
+        // The job type decides which class is created.
+        // Both are used through the JobPosting type (polymorphism).
+        JobPosting job;
 
-        FileHandler.appendLine(
-                "jobs.txt",
-                record
-        );
+        if ("PART-TIME".equals(type)) {
+
+            job = new PartTimeJob(
+                    jobId,
+                    employer.getUserId(),
+                    title,
+                    location,
+                    salary,
+                    description,
+                    skills,
+                    hours
+            );
+
+        } else {
+
+            job = new FullTimeJob(
+                    jobId,
+                    employer.getUserId(),
+                    title,
+                    location,
+                    salary,
+                    description,
+                    skills,
+                    hours
+            );
+        }
+
+        jobManager.addJob(job);
 
         showMessage(
                 "Job posted successfully!\nJob ID: "
-                + jobId,
+                + jobId
+                + "\nType: "
+                + job.getJobType()
+                + "\nEstimated Monthly Pay: "
+                + JobPosting.formatMoney(
+                        job.computeMonthlySalary()
+                ),
                 "Post Job"
         );
     }
@@ -1980,31 +2108,11 @@ public class JobSyncGUI extends JFrame {
     private void showEmployerJobs(
             Employer employer) {
 
-        List<String> jobs =
-                FileHandler.readAll("jobs.txt");
-
-        List<String> myJobs =
-                new ArrayList<>();
-
-        for (String line : jobs) {
-
-            String[] parts =
-                    line.split("\\|", -1);
-
-            if (parts.length >= 8) {
-
-                try {
-
-                    if (Integer.parseInt(parts[1])
-                            == employer.getUserId()) {
-
-                        myJobs.add(line);
-                    }
-
-                } catch (NumberFormatException ignored) {
-                }
-            }
-        }
+        ArrayList<JobPosting> myJobs =
+                jobManager.getJobsByEmployer(
+                        employer.getUserId(),
+                        false
+                );
 
         if (myJobs.isEmpty()) {
 
@@ -2023,62 +2131,10 @@ public class JobSyncGUI extends JFrame {
                 "===== MY JOB POSTS =====\n\n"
         );
 
-        for (String line : myJobs) {
+        for (JobPosting job : myJobs) {
 
-            String[] parts =
-                    line.split("\\|", -1);
-
-            result.append(
-                    "Job ID: "
-                    + parts[0]
-                    + "\n"
-            );
-
-            result.append(
-                    "Title: "
-                    + parts[2]
-                    + "\n"
-            );
-
-            result.append(
-                    "Location: "
-                    + parts[3]
-                    + "\n"
-            );
-
-            result.append(
-                    "Salary: "
-                    + parts[4]
-                    + "\n"
-            );
-
-            result.append(
-                    "Description: "
-                    + parts[5]
-                    + "\n"
-            );
-
-            result.append(
-                    "Required Skills: "
-                    + parts[6]
-                    + "\n"
-            );
-
-            result.append(
-                    "Status: "
-                    + parts[7]
-                    + "\n"
-            );
-
-            if (parts.length >= 9) {
-
-                result.append(
-                        "Type: "
-                        + parts[8]
-                        + "\n"
-                );
-            }
-
+            result.append(job.getDetails());
+            result.append("\n");
             result.append(
                     "-----------------------------\n"
             );
@@ -2097,32 +2153,11 @@ public class JobSyncGUI extends JFrame {
     private void updateJob(
             Employer employer) {
 
-        List<String> jobs =
-                FileHandler.readAll("jobs.txt");
-
-        List<String> myOpenJobs =
-                new ArrayList<>();
-
-        for (String line : jobs) {
-
-            String[] parts =
-                    line.split("\\|", -1);
-
-            if (parts.length >= 8
-                    && parts[7].equalsIgnoreCase("OPEN")) {
-
-                try {
-
-                    if (Integer.parseInt(parts[1])
-                            == employer.getUserId()) {
-
-                        myOpenJobs.add(line);
-                    }
-
-                } catch (NumberFormatException ignored) {
-                }
-            }
-        }
+        ArrayList<JobPosting> myOpenJobs =
+                jobManager.getJobsByEmployer(
+                        employer.getUserId(),
+                        true
+                );
 
         if (myOpenJobs.isEmpty()) {
 
@@ -2141,14 +2176,13 @@ public class JobSyncGUI extends JFrame {
              i < myOpenJobs.size();
              i++) {
 
-            String[] parts =
-                    myOpenJobs.get(i)
-                            .split("\\|", -1);
+            JobPosting job =
+                    myOpenJobs.get(i);
 
             choices[i] =
-                    parts[0]
+                    job.getJobId()
                     + " - "
-                    + parts[2];
+                    + job.getTitle();
         }
 
         JComboBox<String> jobBox =
@@ -2168,33 +2202,37 @@ public class JobSyncGUI extends JFrame {
             return;
         }
 
-        String selected =
+        JobPosting job =
                 myOpenJobs.get(
                         jobBox.getSelectedIndex()
                 );
 
-        String[] parts =
-                selected.split("\\|", -1);
-
         JTextField titleField =
-                new JTextField(parts[2]);
+                new JTextField(job.getTitle());
 
         JTextField locationField =
-                new JTextField(parts[3]);
+                new JTextField(job.getLocation());
 
         JTextField salaryField =
-                new JTextField(parts[4]);
+                new JTextField(
+                        String.valueOf(job.getSalary())
+                );
 
         JTextField descriptionField =
-                new JTextField(parts[5]);
+                new JTextField(job.getDescription());
 
         JTextField skillsField =
-                new JTextField(parts[6]);
+                new JTextField(job.getRequiredSkills());
+
+        JTextField hoursField =
+                new JTextField(
+                        String.valueOf(job.getHoursPerMonth())
+                );
 
         JPanel panel =
                 new JPanel(
                         new GridLayout(
-                                10,
+                                12,
                                 1,
                                 5,
                                 5
@@ -2207,7 +2245,9 @@ public class JobSyncGUI extends JFrame {
         panel.add(new JLabel("Location:"));
         panel.add(locationField);
 
-        panel.add(new JLabel("Salary:"));
+        panel.add(
+                new JLabel("Salary (full-time: per month, part-time: per hour):")
+        );
         panel.add(salaryField);
 
         panel.add(new JLabel("Description:"));
@@ -2215,6 +2255,9 @@ public class JobSyncGUI extends JFrame {
 
         panel.add(new JLabel("Required Skills:"));
         panel.add(skillsField);
+
+        panel.add(new JLabel("Hours per Month:"));
+        panel.add(hoursField);
 
         int save =
                 JOptionPane.showConfirmDialog(
@@ -2230,7 +2273,32 @@ public class JobSyncGUI extends JFrame {
             return;
         }
 
+        String title =
+                titleField.getText().trim();
+
+        String location =
+                locationField.getText().trim();
+
+        String description =
+                descriptionField.getText().trim();
+
+        String skills =
+                skillsField.getText().trim();
+
+        if (title.isEmpty()
+                || location.isEmpty()
+                || description.isEmpty()
+                || skills.isEmpty()) {
+
+            showWarning(
+                    "Please complete all job fields."
+            );
+
+            return;
+        }
+
         double salary;
+        double hours;
 
         try {
 
@@ -2239,42 +2307,32 @@ public class JobSyncGUI extends JFrame {
                             salaryField.getText().trim()
                     );
 
+            hours =
+                    Double.parseDouble(
+                            hoursField.getText().trim()
+                    );
+
+            if (salary < 0 || hours <= 0) {
+                throw new NumberFormatException();
+            }
+
         } catch (NumberFormatException e) {
 
             showWarning(
-                    "Please enter a valid salary."
+                    "Please enter valid salary and hours."
             );
 
             return;
         }
 
-        parts[2] =
-                cleanText(
-                        titleField.getText().trim()
-                );
+        job.setTitle(title);
+        job.setLocation(location);
+        job.setSalary(salary);
+        job.setDescription(description);
+        job.setRequiredSkills(skills);
+        job.setHoursPerMonth(hours);
 
-        parts[3] =
-                cleanText(
-                        locationField.getText().trim()
-                );
-
-        parts[4] =
-                String.valueOf(salary);
-
-        parts[5] =
-                cleanText(
-                        descriptionField.getText().trim()
-                );
-
-        parts[6] =
-                cleanText(
-                        skillsField.getText().trim()
-                );
-
-        replaceJobRecord(
-                parts[0],
-                joinParts(parts)
-        );
+        jobManager.updateJob(job);
 
         showMessage(
                 "Job updated successfully.",
@@ -2289,32 +2347,11 @@ public class JobSyncGUI extends JFrame {
     private void closeJob(
             Employer employer) {
 
-        List<String> jobs =
-                FileHandler.readAll("jobs.txt");
-
-        List<String> myOpenJobs =
-                new ArrayList<>();
-
-        for (String line : jobs) {
-
-            String[] parts =
-                    line.split("\\|", -1);
-
-            if (parts.length >= 8
-                    && parts[7].equalsIgnoreCase("OPEN")) {
-
-                try {
-
-                    if (Integer.parseInt(parts[1])
-                            == employer.getUserId()) {
-
-                        myOpenJobs.add(line);
-                    }
-
-                } catch (NumberFormatException ignored) {
-                }
-            }
-        }
+        ArrayList<JobPosting> myOpenJobs =
+                jobManager.getJobsByEmployer(
+                        employer.getUserId(),
+                        true
+                );
 
         if (myOpenJobs.isEmpty()) {
 
@@ -2333,14 +2370,13 @@ public class JobSyncGUI extends JFrame {
              i < myOpenJobs.size();
              i++) {
 
-            String[] parts =
-                    myOpenJobs.get(i)
-                            .split("\\|", -1);
+            JobPosting job =
+                    myOpenJobs.get(i);
 
             choices[i] =
-                    parts[0]
+                    job.getJobId()
                     + " - "
-                    + parts[2];
+                    + job.getTitle();
         }
 
         JComboBox<String> jobBox =
@@ -2360,19 +2396,16 @@ public class JobSyncGUI extends JFrame {
             return;
         }
 
-        String selected =
+        JobPosting job =
                 myOpenJobs.get(
                         jobBox.getSelectedIndex()
                 );
-
-        String[] parts =
-                selected.split("\\|", -1);
 
         int confirm =
                 JOptionPane.showConfirmDialog(
                         this,
                         "Close job: "
-                        + parts[2]
+                        + job.getTitle()
                         + "?",
                         "Confirm",
                         JOptionPane.YES_NO_OPTION
@@ -2384,12 +2417,7 @@ public class JobSyncGUI extends JFrame {
             return;
         }
 
-        parts[7] = "CLOSED";
-
-        replaceJobRecord(
-                parts[0],
-                joinParts(parts)
-        );
+        jobManager.deleteJob(job.getJobId());
 
         showMessage(
                 "Job closed successfully.",
@@ -3081,6 +3109,18 @@ public class JobSyncGUI extends JFrame {
                         "applications.txt"
                 );
 
+        // IDs of every job posted by this employer
+        List<Integer> myJobIds =
+                new ArrayList<>();
+
+        for (JobPosting job
+                : jobManager.getJobsByEmployer(
+                        employer.getUserId(),
+                        false)) {
+
+            myJobIds.add(job.getJobId());
+        }
+
         List<String> result =
                 new ArrayList<>();
 
@@ -3100,23 +3140,7 @@ public class JobSyncGUI extends JFrame {
                                 appParts[2]
                         );
 
-                String job =
-                        findJob(jobId);
-
-                if (job == null) {
-                    continue;
-                }
-
-                String[] jobParts =
-                        job.split("\\|", -1);
-
-                int employerId =
-                        Integer.parseInt(
-                                jobParts[1]
-                        );
-
-                if (employerId
-                        == employer.getUserId()) {
+                if (myJobIds.contains(jobId)) {
 
                     result.add(application);
                 }
@@ -3177,62 +3201,20 @@ public class JobSyncGUI extends JFrame {
     }
 
     // =====================================================
-    // FIND JOB
-    // =====================================================
-
-    private String findJob(
-            int jobId) {
-
-        List<String> jobs =
-                FileHandler.readAll(
-                        "jobs.txt"
-                );
-
-        for (String line : jobs) {
-
-            String[] parts =
-                    line.split("\\|", -1);
-
-            if (parts.length >= 8) {
-
-                try {
-
-                    if (Integer.parseInt(parts[0])
-                            == jobId) {
-
-                        return line;
-                    }
-
-                } catch (NumberFormatException ignored) {
-                }
-            }
-        }
-
-        return null;
-    }
-
-    // =====================================================
     // GET JOB TITLE
     // =====================================================
 
     private String getJobTitle(
             int jobId) {
 
-        String job =
-                findJob(jobId);
+        JobPosting job =
+                jobManager.findJob(jobId);
 
         if (job == null) {
             return "Unknown Job";
         }
 
-        String[] parts =
-                job.split("\\|", -1);
-
-        if (parts.length >= 3) {
-            return parts[2];
-        }
-
-        return "Unknown Job";
+        return job.getTitle();
     }
 
     // =====================================================
@@ -3392,44 +3374,6 @@ public class JobSyncGUI extends JFrame {
 
         FileHandler.writeAll(
                 "users.txt",
-                updated
-        );
-    }
-
-    // =====================================================
-    // REPLACE JOB RECORD
-    // =====================================================
-
-    private void replaceJobRecord(
-            String jobId,
-            String newRecord) {
-
-        List<String> jobs =
-                FileHandler.readAll(
-                        "jobs.txt"
-                );
-
-        List<String> updated =
-                new ArrayList<>();
-
-        for (String line : jobs) {
-
-            String[] parts =
-                    line.split("\\|", -1);
-
-            if (parts.length >= 1
-                    && parts[0].equals(jobId)) {
-
-                updated.add(newRecord);
-
-            } else {
-
-                updated.add(line);
-            }
-        }
-
-        FileHandler.writeAll(
-                "jobs.txt",
                 updated
         );
     }

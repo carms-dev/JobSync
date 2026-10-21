@@ -21,6 +21,10 @@ public abstract class JobPosting {
         this.open = true;
     }
 
+    // =========================
+    // GETTERS
+    // =========================
+
     public int getJobId() {
         return jobId;
     }
@@ -53,6 +57,15 @@ public abstract class JobPosting {
         return open;
     }
 
+    // Status text used in jobs.txt and on screen
+    public String getStatus() {
+        return open ? "OPEN" : "CLOSED";
+    }
+
+    // =========================
+    // SETTERS
+    // =========================
+
     public void setTitle(String title) {
         this.title = title;
     }
@@ -73,22 +86,99 @@ public abstract class JobPosting {
         this.requiredSkills = requiredSkills;
     }
 
+    // Used when a job is loaded back from jobs.txt
+    public void setOpen(boolean open) {
+        this.open = open;
+    }
+
     public void closeJob() {
         this.open = false;
     }
 
-    public void displayJob() {
-        System.out.println("\n===== JOB DETAILS =====");
-        System.out.println("Job ID: " + jobId);
-        System.out.println("Title: " + title);
-        System.out.println("Location: " + location);
-        System.out.println("Salary: " + salary);
-        System.out.println("Description: " + description);
-        System.out.println("Required Skills: " + requiredSkills);
-        System.out.println("Status: " + (open ? "OPEN" : "CLOSED"));
-    }
+    // =========================
+    // ABSTRACT METHODS
+    // Every job type must define its own version (polymorphism)
+    // =========================
+
+    public abstract String getJobType();
 
     public abstract String getBenefits();
 
+    public abstract String getSalaryDescription();
+
     public abstract double computeMonthlySalary();
+
+    public abstract double getHoursPerMonth();
+
+    public abstract void setHoursPerMonth(double hoursPerMonth);
+
+    // =========================
+    // DISPLAY
+    // =========================
+
+    // Same code works for any job type: the calls to getJobType(),
+    // getBenefits(), etc. run the version of the actual object.
+    public String getDetails() {
+        return "Job ID: " + jobId + "\n"
+                + "Title: " + title + "\n"
+                + "Job Type: " + getJobType() + "\n"
+                + "Location: " + location + "\n"
+                + "Pay: " + getSalaryDescription() + "\n"
+                + "Hours per Month: " + formatHours(getHoursPerMonth()) + "\n"
+                + "Estimated Monthly Pay: " + formatMoney(computeMonthlySalary()) + "\n"
+                + "Benefits: " + getBenefits() + "\n"
+                + "Description: " + description + "\n"
+                + "Required Skills: " + requiredSkills + "\n"
+                + "Status: " + getStatus();
+    }
+
+    public void displayJob() {
+        System.out.println("\n===== JOB DETAILS =====");
+        System.out.println(getDetails());
+    }
+
+    // =========================
+    // FILE RECORD (jobs.txt)
+    // Format: id|employerId|title|location|salary|description|skills|status|type|hours
+    // =========================
+
+    public String toFileString() {
+        return jobId + "|"
+                + employerId + "|"
+                + clean(title) + "|"
+                + clean(location) + "|"
+                + salary + "|"
+                + clean(description) + "|"
+                + clean(requiredSkills) + "|"
+                + getStatus() + "|"
+                + getJobType() + "|"
+                + getHoursPerMonth();
+    }
+
+    // =========================
+    // HELPERS
+    // =========================
+
+    protected static String formatMoney(double amount) {
+        return "PHP " + String.format("%,.2f", amount);
+    }
+
+    protected static String formatHours(double hours) {
+        if (hours == Math.floor(hours)) {
+            return String.valueOf((long) hours);
+        }
+        return String.format("%.1f", hours);
+    }
+
+    // "|" separates fields in the .txt file, so it cannot appear inside text
+    private static String clean(String text) {
+        if (text == null) {
+            return "";
+        }
+
+        return text
+                .replace("|", "/")
+                .replace("\n", " ")
+                .replace("\r", " ");
+    }
 }
