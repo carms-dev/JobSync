@@ -1,0 +1,2 @@
+1|2|Frontend Developer|Holy Name University|60000.0|We are looking for a Frontend Developer to create and maintain user-friendly, responsive websites using HTML, CSS, and JavaScript.|HTML, CSS, JS|OPEN|FULL-TIME|160.0
+2|2|Backend Developer|Holy Name University|70000.0|We are looking for a Backend Developer to develop and maintain the server-side logic, databases, and APIs of our applications.|Java, Python, PHP|OPEN|FULL-TIME|160.0
