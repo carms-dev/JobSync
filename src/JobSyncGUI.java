@@ -2,7 +2,9 @@ import javax.swing.*;
 import java.awt.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
@@ -31,6 +33,16 @@ public class JobSyncGUI extends JFrame {
     private final Font normalFont =
             new Font("Arial", Font.PLAIN, 14);
 
+    private final Color pageColor = new Color(246, 248, 251);
+    private final Color brandColor = new Color(24, 47, 75);
+    private final Color accentColor = new Color(37, 132, 119);
+    private final Color textColor = new Color(35, 48, 63);
+    private final Color mutedColor = new Color(105, 119, 134);
+    private final Color borderColor = new Color(222, 229, 236);
+    private final Map<String, Object> savedWorkspaceDefaults =
+            new LinkedHashMap<>();
+    private boolean workspaceThemeApplied;
+
     // =====================================================
     // CONSTRUCTOR
     // =====================================================
@@ -38,10 +50,18 @@ public class JobSyncGUI extends JFrame {
     public JobSyncGUI() {
 
         setTitle("JobSync");
-        setSize(650, 500);
+        setSize(1000, 700);
+        setMinimumSize(new Dimension(860, 600));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setResizable(true);
+
+        UIManager.put("Label.foreground", textColor);
+        UIManager.put("Panel.background", pageColor);
+        UIManager.put("Button.font", normalFont);
+        UIManager.put("TextField.font", normalFont);
+        UIManager.put("PasswordField.font", normalFont);
+        UIManager.put("ComboBox.font", normalFont);
 
         showLoginPanel();
     }
@@ -52,17 +72,536 @@ public class JobSyncGUI extends JFrame {
 
     private JPanel createMainPanel() {
 
-        JPanel panel = new JPanel(new BorderLayout());
-
-        panel.setBorder(
-                BorderFactory.createEmptyBorder(
-                        25, 35, 25, 35
-                )
-        );
+        JPanel panel = new JPanel(new BorderLayout(24, 24));
+        panel.setBackground(pageColor);
+        panel.setBorder(BorderFactory.createEmptyBorder(32, 36, 32, 36));
 
         return panel;
     }
 
+    private JPanel createBrandPanel() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(brandColor);
+        panel.setBorder(BorderFactory.createEmptyBorder(46, 38, 38, 34));
+        panel.setPreferredSize(new Dimension(340, 0));
+
+        JLabel brand = new JLabel("JOBSYNC");
+        brand.setFont(new Font("Arial", Font.BOLD, 28));
+        brand.setForeground(Color.WHITE);
+
+        JLabel eyebrow = new JLabel("YOUR NEXT CHAPTER STARTS HERE");
+        eyebrow.setFont(new Font("Arial", Font.BOLD, 11));
+        eyebrow.setForeground(new Color(131, 211, 194));
+
+        JLabel headline = new JLabel(
+                "<html>Find the right<br>fit. Build what's<br>next.</html>"
+        );
+        headline.setFont(new Font("Arial", Font.BOLD, 31));
+        headline.setForeground(Color.WHITE);
+
+
+        panel.add(brand);
+        panel.add(Box.createVerticalStrut(70));
+        panel.add(eyebrow);
+        panel.add(Box.createVerticalStrut(16));
+        panel.add(headline);
+        panel.add(Box.createVerticalStrut(18));
+
+        return panel;
+    }
+
+    private JPanel createAuthPage(
+            String heading,
+            String description,
+            JPanel formPanel,
+            JPanel buttonPanel) {
+
+        JPanel page = new JPanel(new BorderLayout());
+        page.setBackground(pageColor);
+        page.add(createBrandPanel(), BorderLayout.WEST);
+
+        JPanel card = new JPanel(new BorderLayout(0, 24));
+        card.setBackground(Color.WHITE);
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(borderColor),
+                BorderFactory.createEmptyBorder(34, 38, 30, 38)
+        ));
+
+        JPanel headingPanel = new JPanel();
+        headingPanel.setLayout(new BoxLayout(headingPanel, BoxLayout.Y_AXIS));
+        headingPanel.setBackground(Color.WHITE);
+
+        JLabel headingLabel = new JLabel(heading);
+        headingLabel.setFont(new Font("Arial", Font.BOLD, 26));
+        headingLabel.setForeground(brandColor);
+
+        JLabel descriptionLabel = new JLabel(description);
+        descriptionLabel.setFont(normalFont);
+        descriptionLabel.setForeground(mutedColor);
+
+        headingPanel.add(headingLabel);
+        headingPanel.add(Box.createVerticalStrut(8));
+        headingPanel.add(descriptionLabel);
+        card.add(headingPanel, BorderLayout.NORTH);
+
+        formPanel.setBackground(Color.WHITE);
+        card.add(formPanel, BorderLayout.CENTER);
+        buttonPanel.setBackground(Color.WHITE);
+        card.add(buttonPanel, BorderLayout.SOUTH);
+
+        JPanel cardWrapper = new JPanel(new GridBagLayout());
+        cardWrapper.setBackground(pageColor);
+        cardWrapper.setBorder(BorderFactory.createEmptyBorder(28, 48, 28, 48));
+        cardWrapper.add(card);
+        page.add(cardWrapper, BorderLayout.CENTER);
+        return page;
+    }
+
+    private void addAuthField(
+            JPanel panel,
+            String labelText,
+            JComponent field,
+            int row) {
+
+        GridBagConstraints constraints = new GridBagConstraints();
+        constraints.gridx = 0;
+        constraints.gridy = row * 2;
+        constraints.weightx = 1;
+        constraints.fill = GridBagConstraints.HORIZONTAL;
+        constraints.insets = new Insets(0, 0, 7, 0);
+
+        JLabel label = new JLabel(labelText);
+        label.setFont(new Font("Arial", Font.BOLD, 13));
+        panel.add(label, constraints);
+
+        constraints.gridy++;
+        constraints.insets = new Insets(0, 0, 18, 0);
+        styleInput(field);
+        panel.add(field, constraints);
+    }
+
+    private void styleInput(JComponent field) {
+        field.setFont(normalFont);
+        field.setBackground(Color.WHITE);
+        field.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(borderColor),
+                BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+        field.setPreferredSize(new Dimension(320, 42));
+    }
+
+    private void styleButton(JButton button, boolean primary) {
+        button.setFont(new Font("Arial", Font.BOLD, 13));
+        button.setFocusPainted(false);
+        button.setOpaque(true);
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        button.setBackground(primary ? accentColor : Color.WHITE);
+        button.setForeground(primary ? Color.WHITE : brandColor);
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(primary ? accentColor : borderColor),
+                BorderFactory.createEmptyBorder(11, 18, 11, 18)
+        ));
+    }
+
+    private JPanel createDashboardPanel(
+            String title,
+            String description,
+            String fullName,
+            JButton[] actions) {
+
+        JPanel panel = new JPanel(new BorderLayout(24, 24)) {
+            @Override
+            protected void paintComponent(Graphics graphics) {
+                Graphics2D g2 = (Graphics2D) graphics.create();
+                g2.setRenderingHint(
+                        RenderingHints.KEY_RENDERING,
+                        RenderingHints.VALUE_RENDER_QUALITY
+                );
+                g2.setPaint(new GradientPaint(
+                        0, 0, new Color(233, 243, 245),
+                        getWidth(), getHeight(), new Color(248, 250, 253)
+                ));
+                g2.fillRect(0, 0, getWidth(), getHeight());
+                g2.dispose();
+            }
+        };
+        panel.setOpaque(true);
+        panel.setBorder(BorderFactory.createEmptyBorder(30, 38, 26, 38));
+
+        String dashboardRole = title.startsWith("Applicant")
+                ? "APPLICANT WORKSPACE" : "EMPLOYER WORKSPACE";
+        GradientPanel hero = new GradientPanel(
+                new Color(24, 55, 78),
+                new Color(35, 132, 119)
+        );
+        hero.setLayout(new BorderLayout(20, 0));
+        hero.setBorder(BorderFactory.createEmptyBorder(25, 30, 25, 28));
+
+        JPanel heroCopy = new JPanel();
+        heroCopy.setLayout(new BoxLayout(heroCopy, BoxLayout.Y_AXIS));
+        heroCopy.setOpaque(false);
+
+        JLabel eyebrow = new JLabel(dashboardRole);
+        eyebrow.setFont(new Font("Arial", Font.BOLD, 11));
+        eyebrow.setForeground(new Color(174, 229, 217));
+
+        JLabel titleLabel = new JLabel("Hello, " + fullName);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 30));
+        titleLabel.setForeground(Color.WHITE);
+
+        JLabel descriptionLabel = new JLabel(description);
+        descriptionLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+        descriptionLabel.setForeground(new Color(224, 237, 241));
+
+        heroCopy.add(eyebrow);
+        heroCopy.add(Box.createVerticalStrut(8));
+        heroCopy.add(titleLabel);
+        heroCopy.add(Box.createVerticalStrut(7));
+        heroCopy.add(descriptionLabel);
+        hero.add(heroCopy, BorderLayout.CENTER);
+
+        JPanel heroActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        heroActions.setOpaque(false);
+        for (JButton action : actions) {
+            if ("Logout".equalsIgnoreCase(action.getText())) {
+                action.setFont(new Font("Arial", Font.BOLD, 12));
+                action.setForeground(Color.WHITE);
+                action.setBackground(new Color(255, 255, 255, 28));
+                action.setOpaque(false);
+                action.setFocusPainted(false);
+                action.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+                action.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(
+                                new Color(218, 239, 237, 170)
+                        ),
+                        BorderFactory.createEmptyBorder(9, 15, 9, 15)
+                ));
+                heroActions.add(action);
+                break;
+            }
+        }
+        hero.add(heroActions, BorderLayout.EAST);
+        panel.add(hero, BorderLayout.NORTH);
+
+        JPanel content = new JPanel(new BorderLayout(0, 14));
+        content.setOpaque(false);
+        content.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 0));
+
+        JPanel sectionHeading = new JPanel(new BorderLayout());
+        sectionHeading.setOpaque(false);
+        JLabel sectionTitle = new JLabel("Your workspace");
+        sectionTitle.setFont(new Font("Arial", Font.BOLD, 20));
+        sectionTitle.setForeground(brandColor);
+        JLabel sectionHint = new JLabel("Choose an action to get started");
+        sectionHint.setFont(new Font("Arial", Font.PLAIN, 13));
+        sectionHint.setForeground(mutedColor);
+        sectionHeading.add(sectionTitle, BorderLayout.WEST);
+        sectionHeading.add(sectionHint, BorderLayout.EAST);
+        content.add(sectionHeading, BorderLayout.NORTH);
+
+        JPanel actionPanel = new JPanel(new GridLayout(0, 3, 16, 16));
+        actionPanel.setOpaque(false);
+        actionPanel.setBorder(BorderFactory.createEmptyBorder(4, 0, 4, 0));
+        for (JButton action : actions) {
+            if ("Logout".equalsIgnoreCase(action.getText())) {
+                continue;
+            }
+            actionPanel.add(createActionCard(action));
+        }
+        JScrollPane cardsScrollPane = new JScrollPane(actionPanel);
+        cardsScrollPane.setBorder(BorderFactory.createEmptyBorder());
+        cardsScrollPane.setOpaque(false);
+        cardsScrollPane.getViewport().setOpaque(false);
+        cardsScrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        content.add(cardsScrollPane, BorderLayout.CENTER);
+        JLabel footer = new JLabel("JOBSYNC  |  CAREER CONNECTIONS");
+        footer.setFont(new Font("Arial", Font.BOLD, 10));
+        footer.setForeground(new Color(126, 144, 158));
+        content.add(footer, BorderLayout.SOUTH);
+        panel.add(content, BorderLayout.CENTER);
+        return panel;
+    }
+
+    private JPanel createActionCard(JButton action) {
+        String label = action.getText();
+        String[] cardDetails = getDashboardCardDetails(label);
+
+        JPanel card = new JPanel(new BorderLayout(0, 12));
+        card.setBackground(Color.WHITE);
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(borderColor),
+                BorderFactory.createEmptyBorder(17, 18, 16, 18)
+        ));
+
+        JPanel cardTop = new JPanel(new BorderLayout());
+        cardTop.setOpaque(false);
+        JLabel badge = new JLabel(cardDetails[0], SwingConstants.CENTER);
+        badge.setFont(new Font("Arial", Font.BOLD, 12));
+        badge.setForeground(accentColor);
+        badge.setOpaque(true);
+        badge.setBackground(new Color(225, 243, 239));
+        badge.setPreferredSize(new Dimension(36, 36));
+        cardTop.add(badge, BorderLayout.WEST);
+
+        JLabel arrow = new JLabel("OPEN");
+        arrow.setFont(new Font("Arial", Font.BOLD, 10));
+        arrow.setForeground(accentColor);
+        cardTop.add(arrow, BorderLayout.EAST);
+        card.add(cardTop, BorderLayout.NORTH);
+
+        action.setText("<html><div style='width:190px'>"
+                + "<span style='font-size:15pt;font-weight:bold;color:#182f4b'>"
+                + escapeHtml(label)
+                + "</span><br><span style='font-size:10pt;color:#697786'>"
+                + escapeHtml(cardDetails[1])
+                + "</span></div></html>");
+        action.setFont(normalFont);
+        action.setHorizontalAlignment(SwingConstants.LEFT);
+        action.setVerticalAlignment(SwingConstants.TOP);
+        action.setBackground(Color.WHITE);
+        action.setForeground(brandColor);
+        action.setOpaque(false);
+        action.setContentAreaFilled(false);
+        action.setFocusPainted(false);
+        action.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+        action.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        card.add(action, BorderLayout.CENTER);
+        card.setPreferredSize(new Dimension(220, 145));
+
+        card.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent event) {
+                setActionCardHover(card, true);
+            }
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent event) {
+                setActionCardHover(card, false);
+            }
+
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent event) {
+                action.doClick();
+            }
+        });
+        action.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent event) {
+                setActionCardHover(card, true);
+            }
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent event) {
+                setActionCardHover(card, card.getMousePosition() != null);
+            }
+        });
+        arrow.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent event) {
+                action.doClick();
+            }
+        });
+        cardTop.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent event) {
+                action.doClick();
+            }
+        });
+        badge.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent event) {
+                action.doClick();
+            }
+        });
+        return card;
+    }
+
+    private void setActionCardHover(JPanel card, boolean hovered) {
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(
+                        hovered ? accentColor : borderColor,
+                        hovered ? 2 : 1
+                ),
+                BorderFactory.createEmptyBorder(
+                        hovered ? 16 : 17,
+                        hovered ? 17 : 18,
+                        hovered ? 15 : 16,
+                        hovered ? 17 : 18
+                )
+        ));
+        card.setBackground(hovered ? new Color(252, 255, 254) : Color.WHITE);
+    }
+
+    private String[] getDashboardCardDetails(String label) {
+        if ("Search & Apply Jobs".equals(label)) {
+            return new String[]{"01", "Explore openings that match your goals."};
+        }
+        if ("My Applications".equals(label) || "Applications".equals(label)) {
+            return new String[]{"02", "Review application progress and details."};
+        }
+        if ("My Interviews".equals(label) || "Schedule Interview".equals(label)) {
+            return new String[]{"03", "Keep interviews and next steps on track."};
+        }
+        if ("My Resume".equals(label)) {
+            return new String[]{"04", "Build a profile employers can discover."};
+        }
+        if ("My Profile".equals(label)) {
+            return new String[]{"05", "Manage your account information."};
+        }
+        if ("Post Job".equals(label)) {
+            return new String[]{"01", "Share a new opportunity with candidates."};
+        }
+        if ("My Jobs".equals(label)) {
+            return new String[]{"02", "View the roles you have posted."};
+        }
+        if ("Review Application".equals(label)) {
+            return new String[]{"04", "Review candidates and update decisions."};
+        }
+        if ("Update Job".equals(label)) {
+            return new String[]{"06", "Edit details on an open position."};
+        }
+        if ("Close Job".equals(label)) {
+            return new String[]{"07", "Close a role that is no longer open."};
+        }
+        return new String[]{"", "Open this workspace feature."};
+    }
+
+    private String escapeHtml(String value) {
+        return value.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;");
+    }
+
+    private void applyWorkspaceTheme() {
+        if (workspaceThemeApplied) {
+            return;
+        }
+
+        String[] keys = {
+                "Panel.background",
+                "Label.foreground",
+                "OptionPane.background",
+                "OptionPane.messageForeground",
+                "Button.background",
+                "Button.foreground",
+                "Button.focus",
+                "TextField.background",
+                "TextField.foreground",
+                "TextArea.background",
+                "TextArea.foreground",
+                "ComboBox.background",
+                "ComboBox.foreground",
+                "ScrollPane.background",
+                "TitledBorder.titleColor"
+        };
+        for (String key : keys) {
+            savedWorkspaceDefaults.put(key, UIManager.get(key));
+        }
+
+        UIManager.put("Panel.background", pageColor);
+        UIManager.put("Label.foreground", textColor);
+        UIManager.put("OptionPane.background", Color.WHITE);
+        UIManager.put("OptionPane.messageForeground", textColor);
+        UIManager.put("Button.background", accentColor);
+        UIManager.put("Button.foreground", Color.WHITE);
+        UIManager.put("Button.focus", new Color(179, 219, 210));
+        UIManager.put("TextField.background", Color.WHITE);
+        UIManager.put("TextField.foreground", textColor);
+        UIManager.put("TextArea.background", Color.WHITE);
+        UIManager.put("TextArea.foreground", textColor);
+        UIManager.put("ComboBox.background", Color.WHITE);
+        UIManager.put("ComboBox.foreground", textColor);
+        UIManager.put("ScrollPane.background", Color.WHITE);
+        UIManager.put("TitledBorder.titleColor", brandColor);
+        workspaceThemeApplied = true;
+    }
+
+    private void restoreLoginTheme() {
+        if (!workspaceThemeApplied) {
+            return;
+        }
+
+        for (Map.Entry<String, Object> entry : savedWorkspaceDefaults.entrySet()) {
+            if (entry.getValue() == null) {
+                UIManager.getDefaults().remove(entry.getKey());
+            } else {
+                UIManager.put(entry.getKey(), entry.getValue());
+            }
+        }
+        savedWorkspaceDefaults.clear();
+        workspaceThemeApplied = false;
+    }
+
+    private void styleWorkspaceTree(Component component) {
+        if (component instanceof JLabel) {
+            component.setForeground(textColor);
+            component.setFont(normalFont);
+        } else if (component instanceof JTextField
+                || component instanceof JPasswordField
+                || component instanceof JComboBox) {
+            JComponent input = (JComponent) component;
+            input.setFont(normalFont);
+            input.setForeground(textColor);
+            input.setBackground(Color.WHITE);
+            input.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(borderColor),
+                    BorderFactory.createEmptyBorder(7, 9, 7, 9)
+            ));
+        } else if (component instanceof JTextArea) {
+            component.setFont(normalFont);
+            component.setForeground(textColor);
+            component.setBackground(Color.WHITE);
+        } else if (component instanceof JButton) {
+            JButton button = (JButton) component;
+            styleButton(button, isPrimaryAction(button.getText()));
+        }
+
+        if (component instanceof Container) {
+            for (Component child : ((Container) component).getComponents()) {
+                styleWorkspaceTree(child);
+            }
+        }
+    }
+
+    private boolean isPrimaryAction(String text) {
+        String normalized = text == null ? "" : text.toLowerCase();
+        return normalized.contains("save")
+                || normalized.contains("create")
+                || normalized.contains("apply")
+                || normalized.contains("update")
+                || normalized.contains("schedule")
+                || normalized.contains("post")
+                || normalized.equals("ok");
+    }
+
+    private static class GradientPanel extends JPanel {
+        private static final long serialVersionUID = 1L;
+
+        private final Color startColor;
+        private final Color endColor;
+
+        private GradientPanel(Color startColor, Color endColor) {
+            this.startColor = startColor;
+            this.endColor = endColor;
+            setOpaque(false);
+        }
+
+        @Override
+        protected void paintComponent(Graphics graphics) {
+            Graphics2D g2 = (Graphics2D) graphics.create();
+            g2.setRenderingHint(
+                    RenderingHints.KEY_ANTIALIASING,
+                    RenderingHints.VALUE_ANTIALIAS_ON
+            );
+            g2.setPaint(new GradientPaint(
+                    0, 0, startColor, getWidth(), getHeight(), endColor
+            ));
+            g2.fillRoundRect(0, 0, getWidth(), getHeight(), 22, 22);
+            g2.dispose();
+            super.paintComponent(graphics);
+        }
+    }
     // =====================================================
     // LOGIN
     // =====================================================
@@ -70,71 +609,23 @@ public class JobSyncGUI extends JFrame {
 
     private void showLoginPanel() {
 
-        JPanel mainPanel = createMainPanel();
-
-        // JOBSYNC title only (tagline removed)
-        JLabel titleLabel = new JLabel(
-                "JOBSYNC",
-                SwingConstants.CENTER
-        );
-        titleLabel.setFont(titleFont);
-
-        JPanel titlePanel = new JPanel(new BorderLayout());
-        titlePanel.add(titleLabel, BorderLayout.CENTER);
-        titlePanel.setBorder(
-                BorderFactory.createEmptyBorder(15, 0, 25, 0)
-        );
-
-        mainPanel.add(titlePanel, BorderLayout.NORTH);
-
-        // Login form with a fixed preferred width
-        JPanel formPanel = new JPanel(new GridLayout(4, 1, 8, 8));
-        formPanel.setPreferredSize(new Dimension(320, 145));
-
-        JLabel usernameLabel = new JLabel("Username:");
-        JLabel passwordLabel = new JLabel("Password:");
-
-        usernameLabel.setFont(normalFont);
-        passwordLabel.setFont(normalFont);
-
+        JPanel formPanel = new JPanel(new GridBagLayout());
         JTextField usernameField = new JTextField();
         JPasswordField passwordField = new JPasswordField();
 
-        // Keep the input boxes a comfortable size
-        usernameField.setPreferredSize(new Dimension(350, 32));
-        passwordField.setPreferredSize(new Dimension(350, 32));
+        addAuthField(formPanel, "Username", usernameField, 0);
+        addAuthField(formPanel, "Password", passwordField, 1);
 
-        formPanel.add(usernameLabel);
-        formPanel.add(usernameField);
-        formPanel.add(passwordLabel);
-        formPanel.add(passwordField);
+        JButton loginButton = new JButton("Sign in");
+        JButton registerButton = new JButton("Create an account");
+        styleButton(loginButton, true);
+        styleButton(registerButton, false);
 
-        // Keep the form centered and prevent it from stretching
-        JPanel formWrapper = new JPanel(new GridBagLayout());
-        formWrapper.add(formPanel);
-
-        mainPanel.add(formWrapper, BorderLayout.CENTER);
-
-        // Login and Register buttons
-        JButton loginButton = new JButton("LOGIN");
-        JButton registerButton = new JButton("REGISTER");
-
-        JPanel buttonPanel = new JPanel();
+        JPanel buttonPanel = new JPanel(new GridLayout(1, 2, 12, 0));
+        buttonPanel.setBorder(BorderFactory.createEmptyBorder(8, 0, 0, 0));
         buttonPanel.add(loginButton);
         buttonPanel.add(registerButton);
 
-        // Footer at the bottom-left, buttons in the bottom-center
-        JPanel bottomPanel = new JPanel(new BorderLayout());
-
-        JLabel footerLabel = new JLabel("Group 8");
-        footerLabel.setFont(new Font("Arial", Font.PLAIN, 11));
-
-        bottomPanel.add(footerLabel, BorderLayout.WEST);
-        bottomPanel.add(buttonPanel, BorderLayout.CENTER);
-
-        mainPanel.add(bottomPanel, BorderLayout.SOUTH);
-
-        // Keep the existing login behavior
         loginButton.addActionListener(e -> {
                 String username = usernameField.getText().trim();
                 String password = new String(passwordField.getPassword());
@@ -142,15 +633,20 @@ public class JobSyncGUI extends JFrame {
                 login(username, password);
         });
 
-        // Keep the existing registration behavior
         registerButton.addActionListener(
                 e -> showRegisterPanel()
         );
 
+        JPanel mainPanel = createAuthPage(
+                "Welcome back",
+                "Sign in to continue to your JobSync workspace.",
+                formPanel,
+                buttonPanel
+        );
         setContentPane(mainPanel);
         revalidate();
         repaint();
-        }
+    }
 
     // =====================================================
     // LOGIN LOGIC
@@ -313,103 +809,30 @@ public class JobSyncGUI extends JFrame {
 
     private void showRegisterPanel() {
 
-        JPanel mainPanel = createMainPanel();
-
-        JLabel titleLabel =
-                new JLabel(
-                        "CREATE ACCOUNT",
-                        SwingConstants.CENTER
-                );
-
-        titleLabel.setFont(titleFont);
-
-        mainPanel.add(
-                titleLabel,
-                BorderLayout.NORTH
+        JPanel formPanel = new JPanel(new GridBagLayout());
+        JTextField nameField = new JTextField();
+        JTextField usernameField = new JTextField();
+        JTextField ageField = new JTextField();
+        JPasswordField passwordField = new JPasswordField();
+        JComboBox<String> roleBox = new JComboBox<>(
+                new String[]{"Applicant", "Employer"}
         );
 
-        JPanel formPanel =
-                new JPanel(
-                        new GridLayout(10, 1, 8, 8)
-                );
+        addAuthField(formPanel, "Full name", nameField, 0);
+        addAuthField(formPanel, "Username", usernameField, 1);
+        addAuthField(formPanel, "Age", ageField, 2);
+        addAuthField(formPanel, "Password", passwordField, 3);
+        addAuthField(formPanel, "Account type", roleBox, 4);
 
-        JLabel nameLabel =
-                new JLabel("Full Name:");
+        JButton registerButton = new JButton("Create account");
+        JButton backButton = new JButton("Back to sign in");
+        styleButton(registerButton, true);
+        styleButton(backButton, false);
 
-        JLabel usernameLabel =
-                new JLabel("Username:");
-
-        JLabel ageLabel =
-                new JLabel("Age:");
-
-        JLabel passwordLabel =
-                new JLabel("Password:");
-
-        JLabel roleLabel =
-                new JLabel("Account Type:");
-
-        JTextField nameField =
-                new JTextField();
-
-        JTextField usernameField =
-                new JTextField();
-
-        JTextField ageField =
-                new JTextField();
-
-        JPasswordField passwordField =
-                new JPasswordField();
-
-        JComboBox<String> roleBox =
-                new JComboBox<>(
-                        new String[]{
-                                "Applicant",
-                                "Employer"
-                        }
-                );
-
-        nameLabel.setFont(normalFont);
-        usernameLabel.setFont(normalFont);
-        ageLabel.setFont(normalFont);
-        passwordLabel.setFont(normalFont);
-        roleLabel.setFont(normalFont);
-
-        formPanel.add(nameLabel);
-        formPanel.add(nameField);
-
-        formPanel.add(usernameLabel);
-        formPanel.add(usernameField);
-
-        formPanel.add(ageLabel);
-        formPanel.add(ageField);
-
-        formPanel.add(passwordLabel);
-        formPanel.add(passwordField);
-
-        formPanel.add(roleLabel);
-        formPanel.add(roleBox);
-
-        mainPanel.add(
-                formPanel,
-                BorderLayout.CENTER
-        );
-
-        JButton registerButton =
-                new JButton("REGISTER");
-
-        JButton backButton =
-                new JButton("BACK TO LOGIN");
-
-        JPanel buttonPanel =
-                new JPanel();
-
+        JPanel buttonPanel = new JPanel(new GridLayout(1, 2, 12, 0));
+        buttonPanel.setBorder(BorderFactory.createEmptyBorder(8, 0, 0, 0));
         buttonPanel.add(registerButton);
         buttonPanel.add(backButton);
-
-        mainPanel.add(
-                buttonPanel,
-                BorderLayout.SOUTH
-        );
 
         registerButton.addActionListener(e -> {
 
@@ -443,6 +866,12 @@ public class JobSyncGUI extends JFrame {
                 e -> showLoginPanel()
         );
 
+        JPanel mainPanel = createAuthPage(
+                "Create your account",
+                "Join JobSync as an applicant or employer.",
+                formPanel,
+                buttonPanel
+        );
         setContentPane(mainPanel);
         revalidate();
         repaint();
@@ -551,46 +980,7 @@ public class JobSyncGUI extends JFrame {
     private void showApplicantDashboard(
             Applicant applicant) {
 
-        JPanel mainPanel = createMainPanel();
-
-        JLabel titleLabel =
-                new JLabel(
-                        "APPLICANT DASHBOARD"
-                );
-
-        titleLabel.setFont(titleFont);
-
-        JLabel welcomeLabel =
-                new JLabel(
-                        "Welcome, "
-                        + applicant.getFullName()
-                        + "!"
-                );
-
-        welcomeLabel.setFont(normalFont);
-
-        JPanel headerPanel =
-                new JPanel(
-                        new GridLayout(2, 1)
-                );
-
-        headerPanel.add(titleLabel);
-        headerPanel.add(welcomeLabel);
-
-        mainPanel.add(
-                headerPanel,
-                BorderLayout.NORTH
-        );
-
-        JPanel buttonPanel =
-                new JPanel(
-                        new GridLayout(
-                                0,
-                                2,
-                                12,
-                                12
-                        )
-                );
+        applyWorkspaceTheme();
 
         JButton profileButton =
                 new JButton("My Profile");
@@ -610,18 +1000,18 @@ public class JobSyncGUI extends JFrame {
         JButton logoutButton =
                 new JButton("Logout");
 
-        buttonPanel.add(profileButton);
-        buttonPanel.add(resumeButton);
-
-        buttonPanel.add(searchButton);
-        buttonPanel.add(applicationsButton);
-
-        buttonPanel.add(interviewsButton);
-        buttonPanel.add(logoutButton);
-
-        mainPanel.add(
-                buttonPanel,
-                BorderLayout.CENTER
+        JPanel mainPanel = createDashboardPanel(
+                "Applicant dashboard",
+                "Everything you need for your next opportunity.",
+                applicant.getFullName(),
+                new JButton[]{
+                        searchButton,
+                        applicationsButton,
+                        interviewsButton,
+                        resumeButton,
+                        profileButton,
+                        logoutButton
+                }
         );
 
         profileButton.addActionListener(
@@ -693,6 +1083,7 @@ public class JobSyncGUI extends JFrame {
 
         JDialog dialog = new JDialog(this, "My Profile", true);
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        styleWorkspaceTree(panel);
         dialog.add(panel);
         dialog.setSize(380, 280);
         dialog.setLocationRelativeTo(this);
@@ -739,6 +1130,7 @@ public class JobSyncGUI extends JFrame {
 
         panel.add(new JLabel("Confirm New Password:"));
         panel.add(confirmPasswordField);
+        styleWorkspaceTree(panel);
 
         int result = JOptionPane.showConfirmDialog(
                 this,
@@ -1109,6 +1501,7 @@ public class JobSyncGUI extends JFrame {
         dialog.setSize(width, height);
         dialog.setResizable(true);
         dialog.setLocationRelativeTo(this);
+        styleWorkspaceTree(dialog.getContentPane());
         dialog.setVisible(true);
     }
 
@@ -1857,46 +2250,7 @@ public class JobSyncGUI extends JFrame {
     private void showEmployerDashboard(
             Employer employer) {
 
-        JPanel mainPanel = createMainPanel();
-
-        JLabel titleLabel =
-                new JLabel(
-                        "EMPLOYER DASHBOARD"
-                );
-
-        titleLabel.setFont(titleFont);
-
-        JLabel welcomeLabel =
-                new JLabel(
-                        "Welcome, "
-                        + employer.getFullName()
-                        + "!"
-                );
-
-        welcomeLabel.setFont(normalFont);
-
-        JPanel headerPanel =
-                new JPanel(
-                        new GridLayout(2, 1)
-                );
-
-        headerPanel.add(titleLabel);
-        headerPanel.add(welcomeLabel);
-
-        mainPanel.add(
-                headerPanel,
-                BorderLayout.NORTH
-        );
-
-        JPanel buttonPanel =
-                new JPanel(
-                        new GridLayout(
-                                0,
-                                2,
-                                12,
-                                12
-                        )
-                );
+        applyWorkspaceTheme();
 
         JButton postJobButton =
                 new JButton("Post Job");
@@ -1925,22 +2279,21 @@ public class JobSyncGUI extends JFrame {
         JButton logoutButton =
                 new JButton("Logout");
 
-        buttonPanel.add(postJobButton);
-        buttonPanel.add(myJobsButton);
-
-        buttonPanel.add(updateJobButton);
-        buttonPanel.add(closeJobButton);
-
-        buttonPanel.add(applicationsButton);
-        buttonPanel.add(reviewButton);
-
-        buttonPanel.add(interviewButton);
-        buttonPanel.add(profileButton);
-        buttonPanel.add(logoutButton);
-
-        mainPanel.add(
-                buttonPanel,
-                BorderLayout.CENTER
+        JPanel mainPanel = createDashboardPanel(
+                "Employer dashboard",
+                "Manage your roles and meet your next great hire.",
+                employer.getFullName(),
+                new JButton[]{
+                        postJobButton,
+                        myJobsButton,
+                        applicationsButton,
+                        reviewButton,
+                        interviewButton,
+                        updateJobButton,
+                        closeJobButton,
+                        profileButton,
+                        logoutButton
+                }
         );
 
         postJobButton.addActionListener(
@@ -3604,6 +3957,7 @@ public class JobSyncGUI extends JFrame {
                 == JOptionPane.YES_OPTION) {
 
             currentUser = null;
+            restoreLoginTheme();
 
             showLoginPanel();
         }
@@ -3655,6 +4009,7 @@ public class JobSyncGUI extends JFrame {
         dialog.setResizable(true);
 
         dialog.add(component);
+        styleWorkspaceTree(dialog.getContentPane());
 
         dialog.setSize(width, height);
 

@@ -166,12 +166,7 @@ public class JobManager {
         return result;
     }
 
-    // =========================
-    // TEXT LINE -> OBJECT
-    // =========================
-
-    // Creates a FullTimeJob or PartTimeJob depending on the saved type.
-    // Returns null if the line is not a valid job record.
+ 
     private JobPosting parseJob(String line) {
         String[] parts = line.split("\\|", -1);
 
