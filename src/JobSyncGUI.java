@@ -216,6 +216,14 @@ public class JobSyncGUI extends JFrame {
                                     fullName
                             );
 
+                                        if (parts.length == 6 || parts.length == 9 || parts.length >= 20) {
+                                                int ageIndex = parts.length >= 20 ? 19
+                                                                : parts.length == 9 ? 8 : 5;
+                                                try {
+                                                        applicant.setAge(Integer.parseInt(parts[ageIndex]));
+                                                } catch (NumberFormatException ignored) {
+                                                }
+                                        }
 
                 if (parts.length >= 19) {
 
@@ -274,6 +282,13 @@ public class JobSyncGUI extends JFrame {
                                     fullName
                             );
 
+                                        if (parts.length >= 6) {
+                                                try {
+                                                        employer.setAge(Integer.parseInt(parts[parts.length - 1]));
+                                                } catch (NumberFormatException ignored) {
+                                                }
+                                        }
+
                     currentUser = employer;
 
                     JOptionPane.showMessageDialog(
@@ -315,7 +330,7 @@ public class JobSyncGUI extends JFrame {
 
         JPanel formPanel =
                 new JPanel(
-                        new GridLayout(8, 1, 8, 8)
+                        new GridLayout(10, 1, 8, 8)
                 );
 
         JLabel nameLabel =
@@ -323,6 +338,9 @@ public class JobSyncGUI extends JFrame {
 
         JLabel usernameLabel =
                 new JLabel("Username:");
+
+        JLabel ageLabel =
+                new JLabel("Age:");
 
         JLabel passwordLabel =
                 new JLabel("Password:");
@@ -334,6 +352,9 @@ public class JobSyncGUI extends JFrame {
                 new JTextField();
 
         JTextField usernameField =
+                new JTextField();
+
+        JTextField ageField =
                 new JTextField();
 
         JPasswordField passwordField =
@@ -349,6 +370,7 @@ public class JobSyncGUI extends JFrame {
 
         nameLabel.setFont(normalFont);
         usernameLabel.setFont(normalFont);
+        ageLabel.setFont(normalFont);
         passwordLabel.setFont(normalFont);
         roleLabel.setFont(normalFont);
 
@@ -357,6 +379,9 @@ public class JobSyncGUI extends JFrame {
 
         formPanel.add(usernameLabel);
         formPanel.add(usernameField);
+
+        formPanel.add(ageLabel);
+        formPanel.add(ageField);
 
         formPanel.add(passwordLabel);
         formPanel.add(passwordField);
@@ -394,6 +419,9 @@ public class JobSyncGUI extends JFrame {
             String username =
                     usernameField.getText().trim();
 
+            String age =
+                    ageField.getText().trim();
+
             String password =
                     new String(
                             passwordField.getPassword()
@@ -405,6 +433,7 @@ public class JobSyncGUI extends JFrame {
             registerUser(
                     fullName,
                     username,
+                    age,
                     password,
                     role
             );
@@ -426,11 +455,13 @@ public class JobSyncGUI extends JFrame {
     private void registerUser(
             String fullName,
             String username,
+            String ageText,
             String password,
             String role) {
 
         if (fullName.isEmpty()
                 || username.isEmpty()
+                || ageText.isEmpty()
                 || password.isEmpty()) {
 
             showWarning(
@@ -439,6 +470,19 @@ public class JobSyncGUI extends JFrame {
 
             return;
         }
+
+                int age;
+                try {
+                        age = Integer.parseInt(ageText);
+                } catch (NumberFormatException e) {
+                        showWarning("Please enter a valid age.");
+                        return;
+                }
+
+                if (age < 1 || age > 120) {
+                        showWarning("Age must be between 1 and 120.");
+                        return;
+                }
 
         List<String> users =
                 FileHandler.readAll("users.txt");
@@ -479,7 +523,9 @@ public class JobSyncGUI extends JFrame {
                 + "|"
                 + cleanText(fullName)
                 + "|"
-                + userType;
+                + userType
+                + "|"
+                + age;
 
         FileHandler.appendLine(
                 "users.txt",
@@ -579,7 +625,7 @@ public class JobSyncGUI extends JFrame {
         );
 
         profileButton.addActionListener(
-                e -> showApplicantProfile(applicant)
+                e -> showUserProfile(applicant)
         );
 
         resumeButton.addActionListener(
@@ -608,17 +654,20 @@ public class JobSyncGUI extends JFrame {
     }
 
     // =====================================================
-    // APPLICANT PROFILE
+    // USER PROFILE
     // =====================================================
 
-    private void showApplicantProfile(Applicant applicant) {
+    private void showUserProfile(User user) {
 
         String message =
                 "===== MY PROFILE =====\n\n"
-                + "User ID: " + applicant.getUserId() + "\n"
-                + "Full Name: " + applicant.getFullName() + "\n"
-                + "Username: " + applicant.getUsername() + "\n"
-                + "Account Type: Applicant";
+                + "User ID: " + user.getUserId() + "\n"
+                + "Full Name: " + user.getFullName() + "\n"
+                + "Username: " + user.getUsername() + "\n"
+                + "Age: " + (user.getAge() > 0
+                        ? user.getAge() : "Not provided") + "\n"
+                + "Account Type: "
+                + (user instanceof Applicant ? "Applicant" : "Employer");
 
         JTextArea profileArea = new JTextArea(message);
         profileArea.setEditable(false);
@@ -650,7 +699,7 @@ public class JobSyncGUI extends JFrame {
 
         editButton.addActionListener(e -> {
                 dialog.dispose();
-                editApplicantProfile(applicant);
+                editUserProfile(user);
         });
 
         okayButton.addActionListener(e -> dialog.dispose());
@@ -659,14 +708,17 @@ public class JobSyncGUI extends JFrame {
     }
 
     // =====================================================
-    // EDIT APPLICANT PROFILE
+    // EDIT USER PROFILE
     // =====================================================
 
 
-    private void editApplicantProfile(Applicant applicant) {
+    private void editUserProfile(User user) {
 
         JTextField nameField =
-                new JTextField(applicant.getFullName(), 20);
+                new JTextField(user.getFullName(), 20);
+
+        JTextField usernameField =
+                new JTextField(user.getUsername(), 20);
 
         JPasswordField newPasswordField =
                 new JPasswordField(20);
@@ -674,10 +726,13 @@ public class JobSyncGUI extends JFrame {
         JPasswordField confirmPasswordField =
                 new JPasswordField(20);
 
-        JPanel panel = new JPanel(new GridLayout(6, 1, 5, 5));
+        JPanel panel = new JPanel(new GridLayout(8, 1, 5, 5));
 
         panel.add(new JLabel("Full Name:"));
         panel.add(nameField);
+
+        panel.add(new JLabel("Username:"));
+        panel.add(usernameField);
 
         panel.add(new JLabel("New Password (leave blank to keep current):"));
         panel.add(newPasswordField);
@@ -698,15 +753,26 @@ public class JobSyncGUI extends JFrame {
         }
 
         String newName = nameField.getText().trim();
+        String newUsername = usernameField.getText().trim();
         String newPassword =
                 new String(newPasswordField.getPassword());
         String confirmPassword =
                 new String(confirmPasswordField.getPassword());
 
-        if (newName.isEmpty()) {
-                showWarning("Full name cannot be empty.");
+        if (newName.isEmpty() || newUsername.isEmpty()) {
+                showWarning("Full name and username cannot be empty.");
                 return;
     }
+
+        for (String line : FileHandler.readAll("users.txt")) {
+            String[] parts = line.split("\\|", -1);
+            if (parts.length >= 2
+                    && !parts[0].equals(String.valueOf(user.getUserId()))
+                    && parts[1].equalsIgnoreCase(newUsername)) {
+                showWarning("Username already exists.");
+                return;
+            }
+        }
 
     // Only change the password if the user entered one.
     if (!newPassword.isEmpty()) {
@@ -721,12 +787,13 @@ public class JobSyncGUI extends JFrame {
             return;
         }
 
-        applicant.setPassword(newPassword);
+                user.setPassword(newPassword);
     }
 
-    applicant.setFullName(newName);
+        user.setFullName(newName);
+        user.setUsername(newUsername);
 
-    updateUserRecord(applicant);
+        updateUserRecord(user);
 
     showMessage(
             "Profile updated successfully.",
@@ -734,7 +801,11 @@ public class JobSyncGUI extends JFrame {
     );
 
     // Refresh the dashboard to show the updated name.
-    showApplicantDashboard(applicant);
+        if (user instanceof Applicant) {
+                showApplicantDashboard((Applicant) user);
+        } else {
+                showEmployerDashboard((Employer) user);
+        }
 }
 
     // =====================================================
@@ -1820,7 +1891,7 @@ public class JobSyncGUI extends JFrame {
         JPanel buttonPanel =
                 new JPanel(
                         new GridLayout(
-                                4,
+                                0,
                                 2,
                                 12,
                                 12
@@ -1848,6 +1919,9 @@ public class JobSyncGUI extends JFrame {
         JButton interviewButton =
                 new JButton("Schedule Interview");
 
+        JButton profileButton =
+                new JButton("My Profile");
+
         JButton logoutButton =
                 new JButton("Logout");
 
@@ -1861,6 +1935,7 @@ public class JobSyncGUI extends JFrame {
         buttonPanel.add(reviewButton);
 
         buttonPanel.add(interviewButton);
+        buttonPanel.add(profileButton);
         buttonPanel.add(logoutButton);
 
         mainPanel.add(
@@ -1894,6 +1969,10 @@ public class JobSyncGUI extends JFrame {
 
         interviewButton.addActionListener(
                 e -> manageInterview(employer)
+        );
+
+        profileButton.addActionListener(
+                e -> showUserProfile(employer)
         );
 
         logoutButton.addActionListener(
@@ -3342,6 +3421,8 @@ public class JobSyncGUI extends JFrame {
                                 record.append("|").append(encodeMultilineText(resume.getExperienceDescription()));
                                 }
 
+                                                        record.append("|").append(user.getAge());
+
                             line =
                                     record.toString();
 
@@ -3361,7 +3442,9 @@ public class JobSyncGUI extends JFrame {
                                     + cleanText(
                                             user.getFullName()
                                     )
-                                    + "|EMPLOYER";
+                                    + "|EMPLOYER"
+                                    + "|"
+                                    + user.getAge();
                         }
                     }
 
